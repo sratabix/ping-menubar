@@ -1,3 +1,4 @@
+import CoreWLAN
 import Foundation
 import TestKit
 
@@ -128,7 +129,10 @@ final class EthernetPortTests: TestCase {
     }
 
     func testTheWiFiInterfaceIsNotAnEthernetPort() {
-        expectFalse(devices.contains("en0"))
+        guard let radio = CWWiFiClient.shared().interface()?.interfaceName else {
+            return skip("no Wi-Fi interface on this machine")
+        }
+        expectFalse(devices.contains(radio), "\(radio) is the Wi-Fi radio, not a LAN port")
     }
 
     func testEveryPortHasABSDName() {

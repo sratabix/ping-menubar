@@ -1,0 +1,3 @@
+import PingMenubarApp
+
+PingApp.main()

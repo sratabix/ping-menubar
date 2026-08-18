@@ -18,6 +18,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var wifi: WiFiSnapshot?
     @Published private(set) var wired: [WiredSnapshot] = []
     @Published private(set) var wifiLog: [LogEntry] = []
+    @Published private(set) var signal = Samples(window: SignalGraph.window)
     @Published var wifiExpanded: Bool = Preferences.wifiExpanded {
         didSet { Preferences.wifiExpanded = wifiExpanded }
     }
@@ -49,6 +50,12 @@ final class AppModel: ObservableObject {
     @Published var showDot: Bool = Preferences.showDot {
         didSet {
             Preferences.showDot = showDot
+            render()
+        }
+    }
+    @Published var networkOnly: Bool = Preferences.networkOnly {
+        didSet {
+            Preferences.networkOnly = networkOnly
             render()
         }
     }
@@ -140,7 +147,7 @@ final class AppModel: ObservableObject {
     }
 
     private func render() {
-        label = MenuBarLabel.image(for: state, showDot: showDot)
+        label = MenuBarLabel.image(for: state, showDot: showDot, dotOnly: networkOnly)
     }
 
     func showNetworkDetail() {
@@ -170,6 +177,7 @@ final class AppModel: ObservableObject {
         let current = wifiMonitor.snapshot()
         wifi = current
         wired = wiredMonitor.snapshots()
+        signal.append(current.powered ? current.rssi.map(Double.init) : nil)
 
         let changes = WiFiLog.changes(from: previous, to: current)
         wifiLog = WiFiLog.append(changes, to: wifiLog, at: Date(), nextID: loggedID)

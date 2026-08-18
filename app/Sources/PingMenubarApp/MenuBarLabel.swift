@@ -42,9 +42,19 @@ enum MenuBarLabel {
         return (lead + reserved + trailingInset).rounded(.up)
     }
 
-    static func image(for state: PingState, showDot: Bool = true, appearance: NSAppearance? = nil) -> NSImage {
+    static var dotOnlyWidth: CGFloat {
+        (dotDiameter + trailingInset * 2).rounded(.up)
+    }
+
+    static func image(
+        for state: PingState,
+        showDot: Bool = true,
+        dotOnly: Bool = false,
+        appearance: NSAppearance? = nil
+    ) -> NSImage {
         let label = text(for: state)
-        let size = NSSize(width: width(of: label, showDot: showDot), height: height)
+        let width = dotOnly ? dotOnlyWidth : width(of: label, showDot: showDot)
+        let size = NSSize(width: width, height: height)
         let dotColour = colour(for: state)
         let image = NSImage(size: size)
 
@@ -52,17 +62,19 @@ enum MenuBarLabel {
             image.lockFocus()
             defer { image.unlockFocus() }
 
-            let drawn = NSAttributedString(
-                string: label, attributes: [.font: font, .foregroundColor: NSColor.labelColor])
-            let textSize = drawn.size()
-            drawn.draw(
-                at: NSPoint(
-                    x: size.width - trailingInset - textSize.width,
-                    y: ((size.height - textSize.height) / 2).rounded()))
+            if !dotOnly {
+                let drawn = NSAttributedString(
+                    string: label, attributes: [.font: font, .foregroundColor: NSColor.labelColor])
+                let textSize = drawn.size()
+                drawn.draw(
+                    at: NSPoint(
+                        x: size.width - trailingInset - textSize.width,
+                        y: ((size.height - textSize.height) / 2).rounded()))
+            }
 
-            guard showDot else { return }
+            guard showDot || dotOnly else { return }
             let dot = NSRect(
-                x: 0,
+                x: dotOnly ? ((size.width - dotDiameter) / 2).rounded() : 0,
                 y: ((size.height - dotDiameter) / 2).rounded(),
                 width: dotDiameter,
                 height: dotDiameter)

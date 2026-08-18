@@ -35,9 +35,9 @@ struct StatusPolicy {
 
 struct Sample: Equatable {
     var at: TimeInterval
-    var rtt: TimeInterval?
+    var value: Double?
 
-    var lost: Bool { rtt == nil }
+    var lost: Bool { value == nil }
 }
 
 struct Samples: Equatable {
@@ -51,8 +51,8 @@ struct Samples: Equatable {
         self.window = window
     }
 
-    mutating func append(_ rtt: TimeInterval?, at: TimeInterval = Clock.now()) {
-        values.append(Sample(at: at, rtt: rtt))
+    mutating func append(_ value: Double?, at: TimeInterval = Clock.now()) {
+        values.append(Sample(at: at, value: value))
         trim(now: at)
     }
 
@@ -71,17 +71,17 @@ struct Samples: Equatable {
     var end: TimeInterval? { values.last?.at }
     var start: TimeInterval? { end.map { $0 - window } }
 
-    private var received: [TimeInterval] { values.compactMap(\.rtt) }
+    private var received: [Double] { values.compactMap(\.value) }
 
-    var latest: TimeInterval? { values.last?.rtt }
-    var lastReceived: TimeInterval? { values.last(where: { !$0.lost })?.rtt }
-    var average: TimeInterval? {
+    var latest: Double? { values.last?.value }
+    var lastReceived: Double? { values.last(where: { !$0.lost })?.value }
+    var average: Double? {
         let received = received
         guard !received.isEmpty else { return nil }
-        return received.reduce(0, +) / TimeInterval(received.count)
+        return received.reduce(0, +) / Double(received.count)
     }
-    var minimum: TimeInterval? { received.min() }
-    var maximum: TimeInterval? { received.max() }
+    var minimum: Double? { received.min() }
+    var maximum: Double? { received.max() }
     var total: Int { values.count }
     var lost: Int { values.count - received.count }
     var loss: Double {

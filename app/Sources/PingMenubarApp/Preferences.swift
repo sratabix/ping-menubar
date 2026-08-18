@@ -7,6 +7,7 @@ enum Preferences {
     static let warnKey = "warnThreshold"
     static let tcpPortKey = "tcpPort"
     static let showDotKey = "showDot"
+    static let networkOnlyKey = "networkOnly"
     static let wifiExpandedKey = "wifiExpanded"
     static let wiredExpandedKey = "wiredExpanded"
 
@@ -56,6 +57,11 @@ enum Preferences {
     static var showDot: Bool {
         get { store.object(forKey: showDotKey) as? Bool ?? true }
         set { store.set(newValue, forKey: showDotKey) }
+    }
+
+    static var networkOnly: Bool {
+        get { store.object(forKey: networkOnlyKey) as? Bool ?? false }
+        set { store.set(newValue, forKey: networkOnlyKey) }
     }
 
     static var wifiExpanded: Bool {

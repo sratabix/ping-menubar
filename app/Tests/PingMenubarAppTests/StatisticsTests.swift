@@ -198,8 +198,8 @@ final class SamplesTests: TestCase {
     }
 
     func testASampleKnowsWhetherItWasLost() {
-        expectTrue(Sample(at: 0, rtt: nil).lost)
-        expectFalse(Sample(at: 0, rtt: 0.01).lost)
+        expectTrue(Sample(at: 0, value: nil).lost)
+        expectFalse(Sample(at: 0, value: 0.01).lost)
     }
 }
 
@@ -227,30 +227,81 @@ final class LatencyGraphTests: TestCase {
 
     func testTheTraceBreaksAtEveryLoss() {
         let values: [TimeInterval?] = [0.01, 0.02, nil, nil, 0.03, nil, 0.04, 0.05]
-        let samples = values.enumerated().map { Sample(at: TimeInterval($0.offset), rtt: $0.element) }
+        let samples = values.enumerated().map { Sample(at: TimeInterval($0.offset), value: $0.element) }
         let runs = LatencyGraph.runs(of: samples)
         expectEqual(runs.map(\.count), [2, 1, 2])
-        expectEqual(runs.map { $0.map(\.rtt) }, [[0.01, 0.02], [0.03], [0.04, 0.05]])
+        expectEqual(runs.map { $0.map(\.value) }, [[0.01, 0.02], [0.03], [0.04, 0.05]])
     }
 
     func testAnUnbrokenStretchIsASingleRun() {
-        let samples = (0..<5).map { Sample(at: TimeInterval($0), rtt: 0.01) }
+        let samples = (0..<5).map { Sample(at: TimeInterval($0), value: 0.01) }
         expectEqual(LatencyGraph.runs(of: samples).count, 1)
         expectEqual(LatencyGraph.runs(of: samples).first?.count, 5)
     }
 
     func testNothingButLossHasNoRuns() {
-        let samples = (0..<5).map { Sample(at: TimeInterval($0), rtt: nil) }
+        let samples = (0..<5).map { Sample(at: TimeInterval($0), value: nil) }
         expectTrue(LatencyGraph.runs(of: samples).isEmpty)
     }
 
     func testLeadingAndTrailingLossesProduceNoEmptyRuns() {
         let values: [TimeInterval?] = [nil, 0.01, nil]
-        let samples = values.enumerated().map { Sample(at: TimeInterval($0.offset), rtt: $0.element) }
+        let samples = values.enumerated().map { Sample(at: TimeInterval($0.offset), value: $0.element) }
         expectEqual(LatencyGraph.runs(of: samples).map(\.count), [1])
     }
 
     func testAnEmptyWindowHasNoRuns() {
         expectTrue(LatencyGraph.runs(of: []).isEmpty)
+    }
+}
+
+final class SignalGraphTests: TestCase {
+    func testQualitySpansTheUsableRange() {
+        expectEqual(SignalScale.quality(-100), 0, accuracy: 1e-9)
+        expectEqual(SignalScale.quality(-75), 0.5, accuracy: 1e-9)
+        expectEqual(SignalScale.quality(-50), 1, accuracy: 1e-9)
+    }
+
+    func testQualityClampsOutsideTheRange() {
+        expectEqual(SignalScale.quality(-120), 0, accuracy: 1e-9)
+        expectEqual(SignalScale.quality(-10), 1, accuracy: 1e-9)
+    }
+
+    func testTheGoodThresholdSitsInTheUpperHalf() {
+        expectGreaterThan(SignalScale.quality(SignalScale.good), 0.5)
+        expectLessThan(SignalScale.quality(SignalScale.good), 1)
+    }
+
+    func testASnapshotAndTheScaleAgreeOnQuality() {
+        var wifi = WiFiSnapshot()
+        wifi.rssi = -67
+        expectEqual(wifi.quality ?? -1, SignalScale.quality(-67), accuracy: 1e-9)
+    }
+
+    func testTheTintFollowsTheLastReading() {
+        var samples = Samples(window: SignalGraph.window)
+        samples.append(-55, at: 10)
+        expectEqual(SignalGraph(samples: samples).tint, SignalScale.tint(SignalScale.quality(-55)))
+        samples.append(nil, at: 20)
+        expectEqual(SignalGraph(samples: samples).tint, SignalScale.tint(SignalScale.quality(-55)))
+    }
+
+    func testAWindowWithoutAReadingFallsBackToTheWeakestTint() {
+        var samples = Samples(window: SignalGraph.window)
+        samples.append(nil, at: 10)
+        expectEqual(SignalGraph(samples: samples).tint, SignalScale.tint(0))
+    }
+
+    func testTheWindowHoldsFiveMinutesOfTwoSecondSamples() {
+        var samples = Samples(window: SignalGraph.window)
+        for tick in 0..<400 { samples.append(-60, at: TimeInterval(tick) * 2) }
+        expectAtLeast(samples.total, 150)
+        expectAtMost(samples.total, 151)
+    }
+
+    func testTheTraceBreaksWhereTheRadioWentQuiet() {
+        let values: [Double?] = [-60, -62, nil, -58]
+        let samples = values.enumerated().map { Sample(at: TimeInterval($0.offset), value: $0.element) }
+        expectEqual(LatencyGraph.runs(of: samples).map(\.count), [2, 1])
     }
 }

@@ -9,7 +9,7 @@ struct WiFiSection: View {
         } label: {
             summary
         }
-        .disclosureGroupStyle(.section)
+        .disclosureGroupStyle(SectionDisclosureStyle { SignalGraph(samples: model.signal).padding(.top, 6) })
     }
 
     private var wifi: WiFiSnapshot? { model.wifi }
@@ -44,10 +44,8 @@ struct WiFiDetails: View {
     var body: some View {
         if let wifi, wifi.powered {
             VStack(alignment: .leading, spacing: 3) {
-                if let rssi = wifi.rssi, let quality = wifi.quality {
+                if let rssi = wifi.rssi {
                     row("Signal", [String(rssi) + " dBm", wifi.qualityLabel])
-                    StrengthBar(quality: quality)
-                        .padding(.bottom, 2)
                 }
                 if let noise = wifi.noise {
                     row("Noise", [String(noise) + " dBm", wifi.snr.map { "SNR \($0) dB" }])
@@ -92,7 +90,7 @@ struct WiFiLogView: View {
             Divider().padding(.vertical, 4)
             box {
                 if entries.isEmpty {
-                    Text("no changes yet")
+                    Text("no wifi changes yet")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 6)
@@ -137,30 +135,6 @@ struct StatRow: View {
     }
 }
 
-struct StrengthBar: View {
-    let quality: Double
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.primary.opacity(0.08))
-                Capsule()
-                    .fill(colour)
-                    .frame(width: max(2, geometry.size.width * quality))
-            }
-        }
-        .frame(height: 3)
-    }
-
-    private var colour: Color {
-        switch quality {
-        case 0.66...: return .green
-        case 0.4..<0.66: return .yellow
-        default: return .orange
-        }
-    }
-}
-
 struct SignalBars: View {
     let quality: Double
 
@@ -180,7 +154,9 @@ struct SignalBars: View {
     }
 }
 
-struct SectionDisclosureStyle: DisclosureGroupStyle {
+struct SectionDisclosureStyle<Accessory: View>: DisclosureGroupStyle {
+    @ViewBuilder var accessory: () -> Accessory
+
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
@@ -197,6 +173,8 @@ struct SectionDisclosureStyle: DisclosureGroupStyle {
             }
             .buttonStyle(.plain)
 
+            accessory()
+
             if configuration.isExpanded {
                 configuration.content
             }
@@ -204,6 +182,6 @@ struct SectionDisclosureStyle: DisclosureGroupStyle {
     }
 }
 
-extension DisclosureGroupStyle where Self == SectionDisclosureStyle {
-    static var section: SectionDisclosureStyle { SectionDisclosureStyle() }
+extension DisclosureGroupStyle where Self == SectionDisclosureStyle<EmptyView> {
+    static var section: Self { SectionDisclosureStyle { EmptyView() } }
 }

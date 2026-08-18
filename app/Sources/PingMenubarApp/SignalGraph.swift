@@ -1,11 +1,29 @@
 import SwiftUI
 
-struct LatencyGraph: View {
-    let samples: Samples
-    let warn: TimeInterval
+enum SignalScale {
+    static let floor: Double = -100
+    static let ceiling: Double = -50
+    static let good: Double = -67
 
-    static let height: CGFloat = 52
-    static let lossWidth: CGFloat = 2
+    static func quality(_ dBm: Double) -> Double {
+        min(max((dBm - floor) / (ceiling - floor), 0), 1)
+    }
+
+    static func tint(_ quality: Double) -> Color {
+        switch quality {
+        case 0.66...: return .green
+        case 0.4..<0.66: return .yellow
+        default: return .orange
+        }
+    }
+}
+
+struct SignalGraph: View {
+    let samples: Samples
+
+    static let height: CGFloat = 40
+    static let window: TimeInterval = 300
+    static let gapWidth: CGFloat = 2
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -21,36 +39,30 @@ struct LatencyGraph: View {
                         .padding(.vertical, 3)
                 }
             }
-            .frame(height: LatencyGraph.height)
+            .frame(height: SignalGraph.height)
             HStack {
-                Text(ceiling.map { "\(MenuBarLabel.milliseconds($0)) full scale" } ?? "")
+                Text("\(Int(SignalScale.ceiling)) dBm full scale")
                 Spacer()
-                Text("last \(Int(samples.window))s")
+                Text("last \(Int(SignalGraph.window / 60))m")
             }
             .font(.caption2)
             .foregroundStyle(.tertiary)
         }
     }
 
-    var ceiling: TimeInterval? {
-        guard let maximum = samples.maximum else { return nil }
-        return max(maximum, warn * 1.25)
+    var tint: Color {
+        SignalScale.tint(samples.lastReceived.map(SignalScale.quality) ?? 0)
     }
 
     private func draw(in context: inout GraphicsContext, size: CGSize) {
-        guard
-            let start = samples.start,
-            let end = samples.end,
-            let ceiling, ceiling > 0,
-            end > start
-        else { return }
+        guard let start = samples.start, let end = samples.end, end > start else { return }
 
         let span = end - start
         func position(_ at: TimeInterval) -> CGFloat {
             size.width * CGFloat((at - start) / span)
         }
-        func height(_ rtt: TimeInterval) -> CGFloat {
-            size.height * CGFloat(min(rtt / ceiling, 1))
+        func height(_ dBm: Double) -> CGFloat {
+            size.height * CGFloat(SignalScale.quality(dBm))
         }
 
         for sample in samples.values where sample.lost {
@@ -58,22 +70,21 @@ struct LatencyGraph: View {
             context.fill(
                 Path(
                     CGRect(
-                        x: x - LatencyGraph.lossWidth / 2, y: 0,
-                        width: LatencyGraph.lossWidth, height: size.height)),
-                with: .color(.red.opacity(0.45)))
+                        x: x - SignalGraph.gapWidth / 2, y: 0,
+                        width: SignalGraph.gapWidth, height: size.height)),
+                with: .color(.secondary.opacity(0.2)))
         }
 
-        if warn < ceiling {
-            let y = size.height - size.height * CGFloat(warn / ceiling)
-            var threshold = Path()
-            threshold.move(to: CGPoint(x: 0, y: y))
-            threshold.addLine(to: CGPoint(x: size.width, y: y))
-            context.stroke(
-                threshold,
-                with: .color(.orange.opacity(0.5)),
-                style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
-        }
+        let y = size.height - size.height * CGFloat(SignalScale.quality(SignalScale.good))
+        var threshold = Path()
+        threshold.move(to: CGPoint(x: 0, y: y))
+        threshold.addLine(to: CGPoint(x: size.width, y: y))
+        context.stroke(
+            threshold,
+            with: .color(.secondary.opacity(0.4)),
+            style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
 
+        let tint = tint
         for run in LatencyGraph.runs(of: samples.values) {
             let points = run.map { sample in
                 CGPoint(x: position(sample.at), y: size.height - height(sample.value ?? 0))
@@ -82,7 +93,7 @@ struct LatencyGraph: View {
 
             guard points.count > 1 else {
                 let dot = CGRect(x: first.x - 1, y: first.y - 1, width: 2, height: 2)
-                context.fill(Path(ellipseIn: dot), with: .color(.accentColor))
+                context.fill(Path(ellipseIn: dot), with: .color(tint))
                 continue
             }
 
@@ -94,7 +105,7 @@ struct LatencyGraph: View {
             context.fill(
                 fill,
                 with: .linearGradient(
-                    Gradient(colors: [.accentColor.opacity(0.35), .accentColor.opacity(0.03)]),
+                    Gradient(colors: [tint.opacity(0.3), tint.opacity(0.03)]),
                     startPoint: .zero,
                     endPoint: CGPoint(x: 0, y: size.height)))
 
@@ -102,17 +113,8 @@ struct LatencyGraph: View {
             line.addLines(points)
             context.stroke(
                 line,
-                with: .color(.accentColor),
+                with: .color(tint),
                 style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
         }
-    }
-
-    static func runs(of samples: [Sample]) -> [[Sample]] {
-        samples.reduce(into: [[Sample]]()) { runs, sample in
-            guard !sample.lost else { return runs.append([]) }
-            if runs.isEmpty { runs.append([]) }
-            runs[runs.count - 1].append(sample)
-        }
-        .filter { !$0.isEmpty }
     }
 }

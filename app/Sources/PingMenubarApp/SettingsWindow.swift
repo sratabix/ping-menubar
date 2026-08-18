@@ -52,9 +52,15 @@ struct SettingsView: View {
             }
             Divider()
             toggle(
+                "Network only",
+                note: "Hides the ping panel and its latency number; the menubar keeps only the status dot.",
+                isOn: $model.networkOnly)
+            toggle(
                 "Show the status dot",
                 note: "A coloured dot left of the number: green, orange, yellow for DNS, red for offline.",
-                isOn: $model.showDot)
+                isOn: $model.showDot
+            )
+            .disabled(model.networkOnly)
             toggle(
                 "Launch app at login",
                 note: "PingMenubar starts with macOS and waits in the menubar.",

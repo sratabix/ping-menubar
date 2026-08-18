@@ -35,7 +35,7 @@ struct WiFiSnapshot: Equatable {
 
     var quality: Double? {
         guard let rssi else { return nil }
-        return min(max(Double(rssi + 100) / 50, 0), 1)
+        return SignalScale.quality(Double(rssi))
     }
 
     var qualityLabel: String? {

@@ -20,6 +20,7 @@ TestRunner.run([
     ResolverTests.self,
     SamplesTests.self,
     SelectableLogTests.self,
+    SignalGraphTests.self,
     StatusPolicyTests.self,
     TCPProbeTests.self,
     WiFiLogAppendTests.self,

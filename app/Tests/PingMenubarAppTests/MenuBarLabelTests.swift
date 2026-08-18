@@ -49,6 +49,37 @@ final class MenuBarLabelTests: TestCase {
         expectEqual(withDot - without, MenuBarLabel.dotDiameter + MenuBarLabel.dotGap)
     }
 
+    func testTheDotOnlyLabelIsNarrowerThanAnyTextLabel() {
+        let dotOnly = MenuBarLabel.image(for: .ok(0.014), dotOnly: true).size.width
+        expectEqual(dotOnly, MenuBarLabel.dotOnlyWidth)
+        expectLessThan(dotOnly, MenuBarLabel.width(of: "14 ms", showDot: false))
+    }
+
+    func testTheDotOnlyLabelKeepsOneWidthAndHeightForEveryState() {
+        let sizes = Set(everyState.map { MenuBarLabel.image(for: $0, dotOnly: true).size.width })
+        expectEqual(sizes, [MenuBarLabel.dotOnlyWidth])
+        let heights = Set(everyState.map { MenuBarLabel.image(for: $0, dotOnly: true).size.height })
+        expectEqual(heights, [MenuBarLabel.height])
+    }
+
+    func testTheDotOnlyLabelDrawsTheDotEvenWhenTheDotIsHidden() {
+        let hidden = MenuBarLabel.image(for: .offline, showDot: false, dotOnly: true)
+        let shown = MenuBarLabel.image(for: .offline, showDot: true, dotOnly: true)
+        expectEqual(hidden.tiffRepresentation, shown.tiffRepresentation)
+    }
+
+    func testTheDotOnlyLabelStillColoursByState() {
+        let ok = MenuBarLabel.image(for: .ok(0.014), dotOnly: true)
+        let offline = MenuBarLabel.image(for: .offline, dotOnly: true)
+        expectNotEqual(ok.tiffRepresentation, offline.tiffRepresentation)
+    }
+
+    func testTheDotOnlyLabelDropsTheNumber() {
+        let text = MenuBarLabel.image(for: .ok(0.014), dotOnly: false)
+        let dot = MenuBarLabel.image(for: .ok(0.014), dotOnly: true)
+        expectLessThan(dot.size.width, text.size.width)
+    }
+
     func testWidthWithoutTheDotIsAlsoConstant() {
         let widths = Set(everyState.map { MenuBarLabel.image(for: $0, showDot: false).size.width })
         expectEqual(widths.count, 1)

@@ -25,6 +25,7 @@ final class PreferencesTests: TestCase {
         expectEqual(Preferences.warnThreshold, 0.12)
         expectEqual(Preferences.tcpPort, 443)
         expectTrue(Preferences.showDot)
+        expectFalse(Preferences.networkOnly)
         expectFalse(Preferences.wifiExpanded)
         expectFalse(Preferences.wiredExpanded)
     }
@@ -36,6 +37,7 @@ final class PreferencesTests: TestCase {
         Preferences.warnThreshold = 0.2
         Preferences.tcpPort = 80
         Preferences.showDot = false
+        Preferences.networkOnly = true
         Preferences.wifiExpanded = true
         Preferences.wiredExpanded = true
 
@@ -45,6 +47,7 @@ final class PreferencesTests: TestCase {
         expectEqual(Preferences.warnThreshold, 0.2)
         expectEqual(Preferences.tcpPort, 80)
         expectFalse(Preferences.showDot)
+        expectTrue(Preferences.networkOnly)
         expectTrue(Preferences.wifiExpanded)
         expectTrue(Preferences.wiredExpanded)
     }

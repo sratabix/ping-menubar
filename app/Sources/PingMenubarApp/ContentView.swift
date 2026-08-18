@@ -7,17 +7,19 @@ struct ContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            header
-            Divider()
-            LatencyGraph(samples: model.samples, warn: model.warnThreshold)
-            stats
-            if let detail = model.detail {
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
+            if !model.networkOnly {
+                header
+                Divider()
+                LatencyGraph(samples: model.samples, warn: model.warnThreshold)
+                stats
+                if let detail = model.detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Divider()
             }
-            Divider()
             WiredSection()
             WiFiSection()
             Divider()
